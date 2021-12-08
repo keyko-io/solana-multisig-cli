@@ -22,11 +22,12 @@ import {Program} from "@project-serum/anchor";
 // @ts-ignore
 import {BN} from "bn.js";
 import {getConnection, getMultisigClient, getNetwork, resolveHome} from "./util";
-import {DEFAULT_PUB_KEY} from "./types";
+import {DEFAULT_PUB_KEY, poolTokens, stableSwapConfig} from "./types";
 import {Buffer} from "buffer";
 // @ts-ignore
 import { blob } from "buffer-layout";
-import * as easyspl from 'easy-spl'
+// import * as easyspl from 'easy-spl'
+import * as saber from "@saberhq/stableswap-sdk";
 
 const uint64 = (property = 'uint64') => {
   return blob(8, property);
@@ -63,6 +64,14 @@ export class MultisigInstance {
         console.error(err);
         return null;
       });
+  }
+
+  async getMultisigPDA() : Promise<string> {
+    const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
+      [this.multisig.toBuffer()],
+      this.multisigClient.programId
+    );
+    return multisigSigner.toString()
   }
 
   async getSigners() : Promise<string[]> {
@@ -205,25 +214,48 @@ export class MultisigInstance {
     return tx
   }
 
-  async initializeTokenAccount(token: PublicKey) : Promise<string | null> {
+  async getAssociatedTokenAccount(token: PublicKey, account?: PublicKey) : Promise<string> {
     const connection = getConnection()
-    easyspl.Wallet.fromKeypair(connection, Keypair.generate())
+    // @ts-ignore
+    const signer = this.multisigClient.provider.wallet.signer()
+    const mintToken = new splToken.Token(connection, token, splToken.TOKEN_PROGRAM_ID, signer)
+    if (account === null || account === undefined) {
+      const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
+        [this.multisig.toBuffer()],
+        this.multisigClient.programId
+      );
+      account = multisigSigner
+    }
+    const associatedAddress = await splToken.Token.getAssociatedTokenAddress(
+      mintToken.associatedProgramId, mintToken.programId, mintToken.publicKey, account, true
+    )
+    return associatedAddress.toString()
+  }
+  /*
+    Initialize a token account for the multisig signer PDA (Program Derived Address)
+   */
+  async initializeTokenAccount(token: PublicKey, account?: PublicKey) : Promise<string> {
+    const connection = getConnection()
+    // easyspl.Wallet.fromKeypair(connection, Keypair.generate())
 
     // @ts-ignore
     const signer = this.multisigClient.provider.wallet.signer()
     const mintToken = new splToken.Token(connection, token, splToken.TOKEN_PROGRAM_ID, signer)
-    const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
-      [this.multisig.toBuffer()],
+    if (account === null || account === undefined) {
+      const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
+        [this.multisig.toBuffer()],
         this.multisigClient.programId
-    );
+      );
+      account = multisigSigner
+    }
     const associatedAddress = await splToken.Token.getAssociatedTokenAddress(
-      mintToken.associatedProgramId, mintToken.programId, mintToken.publicKey, multisigSigner, true
+      mintToken.associatedProgramId, mintToken.programId, mintToken.publicKey, account, true
     )
     console.info(`about to do InitAccount: 
       token=${token.toString()}, 
       multisig=${this.multisig}, 
       splAccount=${associatedAddress},
-      newOwner(multisigSigner)=${multisigSigner}`)
+      newOwner(account || multisigSigner)=${account}`)
 
     try {
       // @ts-ignore
@@ -234,7 +266,7 @@ export class MultisigInstance {
           const transaction = new Transaction()
           transaction.add(
             splToken.Token.createAssociatedTokenAccountInstruction(
-              mintToken.associatedProgramId, mintToken.programId, mintToken.publicKey, associatedAddress, multisigSigner, signer.publicKey
+              mintToken.associatedProgramId, mintToken.programId, mintToken.publicKey, associatedAddress, account, signer.publicKey
           ))
           await sendAndConfirmTransaction(connection, transaction, [signer])
         } catch (err) {// ignore all errors; for now there is no API compatible way to
@@ -319,6 +351,92 @@ export class MultisigInstance {
     console.info(`(token transfer) tx created: ${tx}, transaction.pubkey= ${transaction.publicKey.toString()} `)
     return transaction.publicKey.toString();
   };
+
+  async saberDepositTokens(
+    swapAccount: PublicKey,
+    swapAuthority: PublicKey,
+    poolToken: string,
+    tokenA: string,
+    tokenB: string,
+    tokenAmountA: number,
+    tokenAmountB: number,
+    minimumPoolTokenAmount: number
+  ) : Promise<string> {
+
+    const tokenAccountAKey = new PublicKey(tokenA)
+    const tokenAccountBKey = new PublicKey(tokenB)
+
+    const sourceA = new PublicKey(await this.initializeTokenAccount(tokenAccountAKey))
+    const sourceB = new PublicKey(await this.initializeTokenAccount(tokenAccountBKey))
+    const tokenAccountA = new PublicKey(this.initializeTokenAccount(tokenAccountAKey, swapAuthority))
+    const tokenAccountB = new PublicKey(this.initializeTokenAccount(tokenAccountBKey, swapAuthority))
+
+    const poolTokenMint = new PublicKey(poolToken)
+    const poolTokenAccount = new PublicKey(await this.initializeTokenAccount(poolTokenMint))
+    // the programId of the solana token program, this is always the same
+    const tokenProgramId = splToken.TOKEN_PROGRAM_ID
+    const saberProgramId = saber.SWAP_PROGRAM_ID
+
+    const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
+      [this.multisig.toBuffer()],
+        this.multisigClient.programId
+    );
+    const config = {
+      swapProgramID: saberProgramId,
+      swapAccount,
+      authority: swapAuthority,
+      tokenProgramID: stableSwapConfig.tokenProgramID
+    }
+    const tx_depositInstruction = saber.depositInstruction(
+      {
+        config,
+        userAuthority: multisigSigner,
+        sourceA,
+        sourceB,
+        tokenAccountA,
+        tokenAccountB,
+        poolTokenMint,
+        poolTokenAccount,
+        // @ts-ignore
+        tokenAmountA: new splToken.u64(tokenAmountA),
+        // @ts-ignore
+        tokenAmountB: new splToken.u64(tokenAmountB),
+        // @ts-ignore
+        minimumPoolTokenAmount: new splToken.u64(minimumPoolTokenAmount),
+      }
+    )
+
+    console.info(`multisig: ${this.multisig}`)
+    console.info(`multisigSigner: ${multisigSigner} , nonce: ${nonce}`)
+    console.info(`tokens: ${sourceA.toString()}, ${sourceB.toString()}, ${poolTokenAccount.toString()}`)
+
+    let keys = tx_depositInstruction.keys
+    const transaction = new Account();
+    const txSize = 3000; // TODO: calculate the required size without making it too large
+    const tx = await this.multisigClient.rpc.createTransaction(
+      tx_depositInstruction.programId,
+      keys,
+      tx_depositInstruction.data,
+      {
+        accounts: {
+          multisig: this.multisig,
+          transaction: transaction.publicKey,
+          proposer: this.multisigClient.provider.wallet.publicKey,
+          rent: SYSVAR_RENT_PUBKEY,
+        },
+        signers: [transaction],
+        instructions: [
+          await this.multisigClient.account.transaction.createInstruction(
+            transaction,
+            // @ts-ignore
+            txSize
+          ),
+        ],
+      }
+    );
+    console.info(`(saber pool deposit) tx created: ${tx}, transaction.pubkey= ${transaction.publicKey.toString()} `)
+    return transaction.publicKey.toString();
+  }
 
   async directTransferTokens(destination: PublicKey, tokenAddress: string, amount: number) : Promise<string> {
     const programId = splToken.TOKEN_PROGRAM_ID

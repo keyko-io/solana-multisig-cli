@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import {
+  Account,
   Connection,
   Keypair,
   Signer,
@@ -15,7 +16,13 @@ import MultisigIdl from "../idl";
 import {initialState} from "./types";
 import {NodeWallet} from "./NodeWallet";
 const path = require('path');
-// import {Wallet} from "@project-serum/anchor/dist/provider";
+// Based on this solution: https://www.reddit.com/r/KinFoundation/comments/j7qejf/quick_guide_on_converting_kin_keypair_ready_for/
+// @ts-ignore
+import hexTo32 from 'hex-to-32'
+// @ts-ignore
+import atob from 'atob'
+// @ts-ignore
+import bs58 from 'bs58'
 
 
 export function resolveHome(filepath: string) : string {
