@@ -2,6 +2,7 @@ import {Command, flags} from '@oclif/command'
 import {initialState} from "../multisig/types";
 import {PublicKey} from "@solana/web3.js";
 import {MultisigInstance} from "../multisig/multisigInstance";
+import {getNetwork} from "../multisig/util";
 
 export default class Approve extends Command {
   static description = 'Approve (sign) an existing transaction.'
@@ -23,7 +24,7 @@ export default class Approve extends Command {
   async run() {
     const {args, flags} = this.parse(Approve)
 
-    let multisig = initialState.common.network.multisigUpgradeAuthority
+    let multisig = getNetwork().multisigUpgradeAuthority
     if (flags.multisig) {
       multisig = new PublicKey(flags.multisig)
     }

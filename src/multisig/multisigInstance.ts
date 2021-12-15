@@ -1,5 +1,6 @@
 import {
   Account,
+  AccountMeta,
   SYSVAR_RENT_PUBKEY,
   SYSVAR_CLOCK_PUBKEY,
   Connection,
@@ -16,7 +17,7 @@ import {
   sendAndConfirmTransaction } from "@solana/web3.js";
 import * as splToken from "@solana/spl-token";
 // @ts-ignore
-import * as BufferLayout from 'buffer-layout';
+import * as BufferLayout from "buffer-layout";
 // @ts-ignore
 import {Program} from "@project-serum/anchor";
 // @ts-ignore
@@ -66,6 +67,11 @@ export class MultisigInstance {
       });
   }
 
+  signer(): Signer {
+    // @ts-ignore
+    return this.multisigClient.provider.wallet.signer()
+  }
+
   async getMultisigPDA() : Promise<string> {
     const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
       [this.multisig.toBuffer()],
@@ -75,6 +81,7 @@ export class MultisigInstance {
   }
 
   async getSigners() : Promise<string[]> {
+    console.info(`getSigners: multisig=${this.multisig.toString()}`)
     let multisigAccount: any = await this.multisigClient.account.multisig.fetch(this.multisig.toString())
     return multisigAccount.owners
       .map((ownerKey: PublicKey) => {
@@ -144,7 +151,39 @@ export class MultisigInstance {
     return multisig.publicKey.toString()
   };
 
-  /**
+  async sendTransaction(
+    txName: string,
+    programId: PublicKey,
+    keys: Array<AccountMeta>,
+    data: Buffer,
+    txSize: number
+  ): Promise<string> {
+    const transaction = new Account();
+    const tx = await this.multisigClient.rpc.createTransaction(
+      programId,
+      keys,
+      data,
+      {
+        accounts: {
+          multisig: this.multisig,
+          transaction: transaction.publicKey,
+          proposer: this.multisigClient.provider.wallet.publicKey,
+          rent: SYSVAR_RENT_PUBKEY,
+        },
+        signers: [transaction],
+        instructions: [
+          await this.multisigClient.account.transaction.createInstruction(
+            transaction,
+            txSize
+          ),
+        ],
+      }
+    );
+    console.info(`(${txName}) tx created: ${tx}, transaction.pubkey= ${transaction.publicKey.toString()} `)
+    return transaction.publicKey.toString();
+  }
+
+  /**x`
    * Create Transfer instruction data
    *
    * @param amount Number of tokens to transfer
@@ -152,15 +191,6 @@ export class MultisigInstance {
   createTransferData = (
     amount: number,
   ) => {
-    // const dataLayout = struct([u8('instruction'), uint64('amount')]);
-    // const data = Buffer.alloc(dataLayout.span);
-    // dataLayout.encode({
-    //   instruction: 3,
-    //   // Transfer instruction
-    //   amount: new u64(amount).toBuffer()
-    // }, data);
-
-    // const uint64 = BufferLayout.blob(8, 'uint64')
     const dataLayout = BufferLayout.struct([
       BufferLayout.u8('instruction'),
       uint64('amount'),
@@ -176,9 +206,6 @@ export class MultisigInstance {
       },
       data,
     );
-    // splToken.Token.coder.instruction.encode("change_threshold", {
-    // threshold: new BN(threshold),
-    // });
 
     return data;
   };
@@ -216,9 +243,7 @@ export class MultisigInstance {
 
   async getAssociatedTokenAccount(token: PublicKey, account?: PublicKey) : Promise<string> {
     const connection = getConnection()
-    // @ts-ignore
-    const signer = this.multisigClient.provider.wallet.signer()
-    const mintToken = new splToken.Token(connection, token, splToken.TOKEN_PROGRAM_ID, signer)
+    const mintToken = new splToken.Token(connection, token, splToken.TOKEN_PROGRAM_ID, this.signer())
     if (account === null || account === undefined) {
       const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
         [this.multisig.toBuffer()],
@@ -238,8 +263,7 @@ export class MultisigInstance {
     const connection = getConnection()
     // easyspl.Wallet.fromKeypair(connection, Keypair.generate())
 
-    // @ts-ignore
-    const signer = this.multisigClient.provider.wallet.signer()
+    const signer = this.signer()
     const mintToken = new splToken.Token(connection, token, splToken.TOKEN_PROGRAM_ID, signer)
     if (account === null || account === undefined) {
       const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
@@ -298,10 +322,13 @@ export class MultisigInstance {
       source = new PublicKey(associatedAddress)
       console.info(`multisigSigner-associatedTokenAddress: ${source}`)
     }
-
+    const signer = this.signer()
+    const mintToken = new splToken.Token(getConnection(), token, splToken.TOKEN_PROGRAM_ID, signer)
+    const base_tokenAmount = Math.pow(10, (await mintToken.getMintInfo()).decimals) * tokenAmount
     // the programId of the solana token program, this is always the same
     const programId = splToken.TOKEN_PROGRAM_ID
-    const data = this.createTransferData(tokenAmount)
+    // TODO: convert amount by multiplying by the token decimals
+    const data = this.createTransferData(base_tokenAmount)
     const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
       [this.multisig.toBuffer()],
         this.multisigClient.programId
@@ -325,53 +352,47 @@ export class MultisigInstance {
         isWritable: false
     }];
 
-    const transaction = new Account();
     const txSize = 1000; // 432 bytes should be sufficient, but will use 1000 for now
-    const tx = await this.multisigClient.rpc.createTransaction(
+    return await this.sendTransaction(
+      'Token transfer',
       programId,
       keys,
       data,
-      {
-        accounts: {
-          multisig: this.multisig,
-          transaction: transaction.publicKey,
-          proposer: this.multisigClient.provider.wallet.publicKey,
-          rent: SYSVAR_RENT_PUBKEY,
-        },
-        signers: [transaction],
-        instructions: [
-          await this.multisigClient.account.transaction.createInstruction(
-            transaction,
-            // @ts-ignore
-            txSize
-          ),
-        ],
-      }
-    );
-    console.info(`(token transfer) tx created: ${tx}, transaction.pubkey= ${transaction.publicKey.toString()} `)
-    return transaction.publicKey.toString();
+      txSize
+    )
   };
 
   async saberDepositTokens(
     swapAccount: PublicKey,
     swapAuthority: PublicKey,
-    poolToken: string,
-    tokenA: string,
-    tokenB: string,
     tokenAmountA: number,
     tokenAmountB: number,
     minimumPoolTokenAmount: number
   ) : Promise<string> {
 
-    const tokenAccountAKey = new PublicKey(tokenA)
-    const tokenAccountBKey = new PublicKey(tokenB)
+    const connection = getConnection()
+    const swap = await saber.StableSwap.load(connection, swapAccount, saber.SWAP_PROGRAM_ID)
+    const tokenAMint = swap.state.tokenA.mint // new PublicKey(tokenA)
+    const tokenBMint = swap.state.tokenB.mint // new PublicKey(tokenB)
+    const signer = this.signer()
+    const mintTokenA = new splToken.Token(connection, tokenAMint, splToken.TOKEN_PROGRAM_ID, signer)
+    const mintTokenB = new splToken.Token(connection, tokenBMint, splToken.TOKEN_PROGRAM_ID, signer)
+    const base_tokenAmountA = Math.pow(10, (await mintTokenA.getMintInfo()).decimals) * tokenAmountA
+    const base_tokenAmountB = Math.pow(10, (await mintTokenB.getMintInfo()).decimals) * tokenAmountB
 
-    const sourceA = new PublicKey(await this.initializeTokenAccount(tokenAccountAKey))
-    const sourceB = new PublicKey(await this.initializeTokenAccount(tokenAccountBKey))
-    const tokenAccountA = new PublicKey(this.initializeTokenAccount(tokenAccountAKey, swapAuthority))
-    const tokenAccountB = new PublicKey(this.initializeTokenAccount(tokenAccountBKey, swapAuthority))
+    const sourceA = new PublicKey(await this.initializeTokenAccount(tokenAMint))
+    const sourceB = new PublicKey(await this.initializeTokenAccount(tokenBMint))
 
-    const poolTokenMint = new PublicKey(poolToken)
+    const tokenAReserve = swap.state.tokenA.reserve
+    const tokenBReserve = swap.state.tokenB.reserve
+    console.info(
+      `accounts: ${sourceA.toString()}, ${sourceB.toString()}, ${tokenAReserve.toString()}, ${tokenBReserve.toString()}, `
+    )
+    // connection.getTokenAccountsByOwner(swapAuthority, {mint: tokenAMint, programId: splToken.TOKEN_PROGRAM_ID})
+
+    const poolTokenMint = swap.state.poolTokenMint
+    const mintPoolToken = new splToken.Token(connection, poolTokenMint, splToken.TOKEN_PROGRAM_ID, signer)
+    const base_minimumPoolTokenAmount = Math.pow(10, (await mintPoolToken.getMintInfo()).decimals) * minimumPoolTokenAmount
     const poolTokenAccount = new PublicKey(await this.initializeTokenAccount(poolTokenMint))
     // the programId of the solana token program, this is always the same
     const tokenProgramId = splToken.TOKEN_PROGRAM_ID
@@ -393,16 +414,16 @@ export class MultisigInstance {
         userAuthority: multisigSigner,
         sourceA,
         sourceB,
-        tokenAccountA,
-        tokenAccountB,
+        tokenAccountA: tokenAReserve,
+        tokenAccountB: tokenBReserve,
         poolTokenMint,
         poolTokenAccount,
         // @ts-ignore
-        tokenAmountA: new splToken.u64(tokenAmountA),
+        tokenAmountA: new splToken.u64(base_tokenAmountA),
         // @ts-ignore
-        tokenAmountB: new splToken.u64(tokenAmountB),
+        tokenAmountB: new splToken.u64(base_tokenAmountB),
         // @ts-ignore
-        minimumPoolTokenAmount: new splToken.u64(minimumPoolTokenAmount),
+        minimumPoolTokenAmount: new splToken.u64(base_minimumPoolTokenAmount),
       }
     )
 
@@ -410,45 +431,110 @@ export class MultisigInstance {
     console.info(`multisigSigner: ${multisigSigner} , nonce: ${nonce}`)
     console.info(`tokens: ${sourceA.toString()}, ${sourceB.toString()}, ${poolTokenAccount.toString()}`)
 
-    let keys = tx_depositInstruction.keys
-    const transaction = new Account();
     const txSize = 3000; // TODO: calculate the required size without making it too large
-    const tx = await this.multisigClient.rpc.createTransaction(
+    return await this.sendTransaction(
+      'Saber deposit tokens',
       tx_depositInstruction.programId,
-      keys,
+      tx_depositInstruction.keys,
       tx_depositInstruction.data,
-      {
-        accounts: {
-          multisig: this.multisig,
-          transaction: transaction.publicKey,
-          proposer: this.multisigClient.provider.wallet.publicKey,
-          rent: SYSVAR_RENT_PUBKEY,
-        },
-        signers: [transaction],
-        instructions: [
-          await this.multisigClient.account.transaction.createInstruction(
-            transaction,
-            // @ts-ignore
-            txSize
-          ),
-        ],
-      }
+      txSize
+    )
+  }
+
+  async saberWithdrawTokens(
+    swapAccount: PublicKey,
+    swapAuthority: PublicKey,
+    poolTokenAmount: number,
+    minimumTokenAmountA: number,
+    minimumTokenAmountB: number,
+    userAccountA?: PublicKey | null,
+    userAccountB?: PublicKey | null
+  ) : Promise<string> {
+
+    const connection = getConnection()
+    const swap = await saber.StableSwap.load(connection, swapAccount, saber.SWAP_PROGRAM_ID)
+    const tokenAMint = swap.state.tokenA.mint
+    const tokenBMint = swap.state.tokenB.mint
+
+    const signer = this.signer()
+    const tokenAInstance = new splToken.Token(connection, tokenAMint, splToken.TOKEN_PROGRAM_ID, signer)
+    const tokenBInstance = new splToken.Token(connection, tokenBMint, splToken.TOKEN_PROGRAM_ID, signer)
+    const base_minimumTokenAmountA = Math.pow(10, (await tokenAInstance.getMintInfo()).decimals) * minimumTokenAmountA
+    const base_minimumTokenAmountB = Math.pow(10, (await tokenBInstance.getMintInfo()).decimals) * minimumTokenAmountB
+
+    if (!userAccountA) {
+      userAccountA = new PublicKey(await this.initializeTokenAccount(tokenAMint))
+    }
+    if (!userAccountB) {
+      userAccountB = new PublicKey(await this.initializeTokenAccount(tokenBMint))
+    }
+    const tokenAReserve = swap.state.tokenA.reserve
+    const tokenBReserve = swap.state.tokenB.reserve
+    console.info(
+      `accounts: ${userAccountA.toString()}, ${userAccountB.toString()}, ${tokenAReserve.toString()}, ${tokenBReserve.toString()}, `
+    )
+
+    const poolTokenMint = swap.state.poolTokenMint
+    const mintPoolToken = new splToken.Token(connection, poolTokenMint, splToken.TOKEN_PROGRAM_ID, signer)
+    const base_poolTokenAmount = Math.pow(10, (await mintPoolToken.getMintInfo()).decimals) * poolTokenAmount
+    const poolTokenAccount = new PublicKey(await this.initializeTokenAccount(poolTokenMint))
+    const saberProgramId = saber.SWAP_PROGRAM_ID
+
+    const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
+      [this.multisig.toBuffer()],
+        this.multisigClient.programId
     );
-    console.info(`(saber pool deposit) tx created: ${tx}, transaction.pubkey= ${transaction.publicKey.toString()} `)
-    return transaction.publicKey.toString();
+    const config = {
+      swapProgramID: saberProgramId,
+      swapAccount,
+      authority: swapAuthority,
+      tokenProgramID: stableSwapConfig.tokenProgramID
+    }
+    const tx_withdrawInstruction = saber.withdrawInstruction(
+      {
+        config: config,
+        userAuthority: multisigSigner,
+        poolMint: poolTokenMint,
+        sourceAccount: poolTokenAccount,
+        tokenAccountA: tokenAReserve,
+        tokenAccountB: tokenBReserve,
+        userAccountA: userAccountA,
+        userAccountB: userAccountB,
+        adminFeeAccountA: swap.state.tokenA.adminFeeAccount,
+        adminFeeAccountB: swap.state.tokenB.adminFeeAccount,
+        // @ts-ignore
+        poolTokenAmount: new splToken.u64(base_poolTokenAmount),
+        // @ts-ignore
+        minimumTokenA: new splToken.u64(base_minimumTokenAmountA),
+        // @ts-ignore
+        minimumTokenB: new splToken.u64(base_minimumTokenAmountB),
+      }
+    )
+
+    console.info(`multisig: ${this.multisig}`)
+    console.info(`multisigSigner: ${multisigSigner} , nonce: ${nonce}`)
+    console.info(`tokens: ${userAccountA.toString()}, ${userAccountB.toString()}, ${poolTokenAccount.toString()}`)
+
+    const txSize = 3000; // TODO: calculate the required size without making it too large
+    return await this.sendTransaction(
+      'Saber withdraw tokens',
+      tx_withdrawInstruction.programId,
+      tx_withdrawInstruction.keys,
+      tx_withdrawInstruction.data,
+      txSize
+    )
   }
 
   async directTransferTokens(destination: PublicKey, tokenAddress: string, amount: number) : Promise<string> {
     const programId = splToken.TOKEN_PROGRAM_ID
-    const data = this.createTransferData(amount)
     const tokenPubkey = new PublicKey(tokenAddress)
-    // @ts-ignore
-    const owner = this.multisigClient.provider.wallet.signer()
+    const owner = this.signer()
     const senderPubkey = this.multisigClient.provider.wallet.publicKey
     const mintToken = new splToken.Token(getConnection(), tokenPubkey, programId, owner)
     const source = await splToken.Token.getAssociatedTokenAddress(
       mintToken.associatedProgramId, mintToken.programId, mintToken.publicKey, senderPubkey
     )
+    const data = this.createTransferData(Math.pow(10, (await mintToken.getMintInfo()).decimals) * amount)
 
     let keys = [{
         pubkey: source,
@@ -469,5 +555,72 @@ export class MultisigInstance {
     const tx = await sendAndConfirmTransaction(getConnection(), transaction, [owner])
     console.info(`token transfer tx sent: ${tx}, ${owner.publicKey.toString()}, ${source.toString()}, ${destination.toString()} `)
     return tx.toString();
+  }
+
+  async directSaberDepositTokens(
+    swapAccount: PublicKey,
+    swapAuthority: PublicKey,
+    tokenAmountA: number,
+    tokenAmountB: number,
+    minimumPoolTokenAmount: number
+  ) : Promise<string> {
+
+    const connection = getConnection()
+    const swap = await saber.StableSwap.load(connection, swapAccount, saber.SWAP_PROGRAM_ID)
+    const tokenAMint = swap.state.tokenA.mint
+    const tokenBMint = swap.state.tokenB.mint
+
+    const signer = this.signer()
+    const mintTokenA = new splToken.Token(connection, tokenAMint, splToken.TOKEN_PROGRAM_ID, signer)
+    const mintTokenB = new splToken.Token(connection, tokenBMint, splToken.TOKEN_PROGRAM_ID, signer)
+    const base_tokenAmountA = Math.pow(10, (await mintTokenA.getMintInfo()).decimals) * tokenAmountA
+    const base_tokenAmountB = Math.pow(10, (await mintTokenB.getMintInfo()).decimals) * tokenAmountB
+
+    const sourceA = new PublicKey(await this.initializeTokenAccount(tokenAMint, signer.publicKey))
+    const sourceB = new PublicKey(await this.initializeTokenAccount(tokenBMint, signer.publicKey))
+
+    const tokenAccountA = swap.state.tokenA.reserve
+    const tokenAccountB = swap.state.tokenB.reserve
+
+    const poolTokenMint = swap.state.poolTokenMint
+    const mintPoolToken = new splToken.Token(connection, poolTokenMint, splToken.TOKEN_PROGRAM_ID, signer)
+    const base_minimumPoolTokenAmount = Math.pow(10, (await mintPoolToken.getMintInfo()).decimals) * minimumPoolTokenAmount
+    const poolTokenAccount = new PublicKey(await this.initializeTokenAccount(poolTokenMint, signer.publicKey))
+    // the programId of the solana token program, this is always the same
+    const tokenProgramId = splToken.TOKEN_PROGRAM_ID
+    const saberProgramId = saber.SWAP_PROGRAM_ID
+
+    const config = {
+      swapProgramID: saberProgramId,
+      swapAccount,
+      authority: swapAuthority,
+      tokenProgramID: stableSwapConfig.tokenProgramID
+    }
+    const tx_depositInstruction = saber.depositInstruction(
+      {
+        config,
+        userAuthority: signer.publicKey,
+        sourceA,
+        sourceB,
+        tokenAccountA,
+        tokenAccountB,
+        poolTokenMint,
+        poolTokenAccount,
+        // @ts-ignore
+        tokenAmountA: new splToken.u64(base_tokenAmountA),
+        // @ts-ignore
+        tokenAmountB: new splToken.u64(base_tokenAmountB),
+        // @ts-ignore
+        minimumPoolTokenAmount: new splToken.u64(base_minimumPoolTokenAmount),
+      }
+    )
+
+    console.info(`tokens: ${sourceA.toString()}, ${sourceB.toString()}, ${poolTokenAccount.toString()}`)
+
+    // let keys = tx_depositInstruction.keys
+    const transaction = new Transaction().add(tx_depositInstruction)
+    const tx = await sendAndConfirmTransaction(connection, transaction, [signer])
+    console.info(`(saber pool deposit) tx created: ${tx}`)
+    return tx;
   }
 }

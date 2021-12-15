@@ -2,6 +2,7 @@ import {Command, flags} from '@oclif/command'
 import {PublicKey} from "@solana/web3.js";
 import {initialState, poolTokens} from "../multisig/types";
 import {MultisigInstance} from "../multisig/multisigInstance";
+import {getNetwork} from "../multisig/util";
 
 export default class SaberDeposit extends Command {
   static description = 'Deposit tokens into a Saber pool.'
@@ -21,7 +22,7 @@ export default class SaberDeposit extends Command {
 
   async run() {
     const {args, flags} = this.parse(SaberDeposit)
-    let multisig = initialState.common.network.multisigUpgradeAuthority
+    let multisig = getNetwork().multisigUpgradeAuthority
     if (flags.multisig) {
       multisig = new PublicKey(flags.multisig)
     }
@@ -45,13 +46,22 @@ export default class SaberDeposit extends Command {
     const amountB = parseFloat(args.amountB)
     const amountPoolMin = parseFloat(args.minPoolAmount)
     const multisigInst = new MultisigInstance(multisig)
-
+    // multisigInst.directSaberDepositTokens(
+    //   new PublicKey(poolTokens.usdc_usdt.swapAccount),
+    //   new PublicKey(poolTokens.usdc_usdt.authority),
+    //   // poolTokens.usdc_usdt.poolToken,
+    //   // poolTokens.usdc_usdt.tokenA,
+    //   // poolTokens.usdc_usdt.tokenB,
+    //   amountA,
+    //   amountB,
+    //   amountPoolMin
+    // )
     multisigInst.saberDepositTokens(
       new PublicKey(poolTokens.usdc_usdt.swapAccount),
       new PublicKey(poolTokens.usdc_usdt.authority),
-      poolTokens.usdc_usdt.poolToken,
-      poolTokens.usdc_usdt.tokenA,
-      poolTokens.usdc_usdt.tokenB,
+      // poolTokens.usdc_usdt.poolToken,
+      // poolTokens.usdc_usdt.tokenA,
+      // poolTokens.usdc_usdt.tokenB,
       amountA,
       amountB,
       amountPoolMin

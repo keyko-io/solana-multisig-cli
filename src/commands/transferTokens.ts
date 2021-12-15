@@ -2,6 +2,7 @@ import {Command, flags} from '@oclif/command'
 import {PublicKey} from "@solana/web3.js";
 import {initialState} from "../multisig/types";
 import {MultisigInstance} from "../multisig/multisigInstance";
+import {getNetwork} from "../multisig/util";
 
 export default class TransferTokens extends Command {
   static description = 'Submit a transaction to transfer tokens via the multisig wallet.'
@@ -30,7 +31,7 @@ export default class TransferTokens extends Command {
 
   async run() {
     const {args, flags} = this.parse(TransferTokens)
-    let multisig = initialState.common.network.multisigUpgradeAuthority
+    let multisig = getNetwork().multisigUpgradeAuthority
     if (flags.multisig) {
       multisig = new PublicKey(flags.multisig)
     }
@@ -53,6 +54,7 @@ export default class TransferTokens extends Command {
     const source = flags.from ? new PublicKey(flags.from) : null
     const amount = parseFloat(flags.amount)
     const multisigInst = new MultisigInstance(multisig)
+    this.log(`using multisigInstnace with multisig account: ${multisigInst.multisig.toString()}`)
     multisigInst.sendTokenTransferTx(source, new PublicKey(args.token), new PublicKey(flags.destination), amount)
 
   }

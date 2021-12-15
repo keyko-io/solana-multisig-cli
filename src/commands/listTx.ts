@@ -5,6 +5,7 @@ import {MultisigInstance} from "../multisig/multisigInstance";
 // @ts-ignore
 import * as BufferLayout from "buffer-layout";
 import * as splToken from "@solana/spl-token";
+import {getNetwork} from "../multisig/util";
 
 const uint64 = (property = 'uint64') => {
   return BufferLayout.blob(8, property);
@@ -36,8 +37,8 @@ tx: 0x....
       this.log('"multisig" argument is required and should be the multisig account.')
     }
     const env_programId = ''
-    const programId = initialState.common.network.multisigProgramId.toString()
-    const multisig = args.multisig ? args.multisig : initialState.common.network.multisigUpgradeAuthority
+    const programId = getNetwork().multisigProgramId.toString()
+    const multisig = args.multisig ? args.multisig : getNetwork().multisigUpgradeAuthority
     this.log(`getting transactions list from multisig "${multisig}" at program "${programId}"`)
 
     const multisigInst = new MultisigInstance(new PublicKey(multisig))

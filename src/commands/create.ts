@@ -2,6 +2,7 @@ import {Command, flags} from '@oclif/command'
 import {PublicKey} from "@solana/web3.js";
 import {initialState} from "../multisig/types";
 import {MultisigInstance} from "../multisig/multisigInstance";
+import {getNetwork} from "../multisig/util";
 
 export default class Create extends Command {
   static description = 'Create a new multisig account.'
@@ -22,7 +23,7 @@ tx: 0x....
       description: 'multisig threshold, minimum number of signers ' +
         'required to execute a transaction (DEFAULT=2).'}),
     maxNumSigners: flags.integer({
-      char: 'm',
+      char: 'x',
       default: 10,
       description: 'max number of signers in the multisig (DEFAULT=10).'}),
   }
@@ -31,6 +32,7 @@ tx: 0x....
 
   async run() {
     const {args, flags} = this.parse(Create)
+    this.log(`network is ${getNetwork().url}`)
 
     if (!args.participants && !flags.participants) {
       this.log('"participants" must be provided as an argument or in the -p (--participants) flag.')
@@ -58,8 +60,7 @@ tx: 0x....
       this.exit(1)
     }
 
-    const multisig = initialState.common.network.multisigUpgradeAuthority
-    const multisigInst = new MultisigInstance(multisig ? new PublicKey(multisig.toString()) : null)
+    const multisigInst = new MultisigInstance(null)
     const newMultisig = await multisigInst.createMultisig(participants, maxSigners, threshold)
     this.log(`created new multisig: pubkey ${newMultisig}`)
   }

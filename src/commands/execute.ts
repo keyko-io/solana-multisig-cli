@@ -2,6 +2,7 @@ import {Command, flags} from '@oclif/command'
 import {initialState} from "../multisig/types";
 import {PublicKey} from "@solana/web3.js";
 import {MultisigInstance} from "../multisig/multisigInstance";
+import {getNetwork} from "../multisig/util";
 
 export default class Execute extends Command {
   static description = 'Execute an existing transaction that is already signed by the minimum number of owners.'
@@ -23,7 +24,7 @@ export default class Execute extends Command {
   async run() {
     const {args, flags} = this.parse(Execute)
 
-    let multisig = initialState.common.network.multisigUpgradeAuthority
+    let multisig = getNetwork().multisigUpgradeAuthority
     if (flags.multisig) {
       multisig = new PublicKey(flags.multisig)
     }

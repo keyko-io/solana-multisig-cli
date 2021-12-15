@@ -13,7 +13,7 @@ import {
   sendAndConfirmTransaction } from "@solana/web3.js";
 import { Program, Provider } from "@project-serum/anchor";
 import MultisigIdl from "../idl";
-import {initialState} from "./types";
+import {initialState, networks} from "./types";
 import {NodeWallet} from "./NodeWallet";
 const path = require('path');
 // Based on this solution: https://www.reddit.com/r/KinFoundation/comments/j7qejf/quick_guide_on_converting_kin_keypair_ready_for/
@@ -30,6 +30,16 @@ export function resolveHome(filepath: string) : string {
 }
 
 export function getNetwork(): any {
+  if (process.env.SOL_NETWORK === "mainnet") {
+    return networks.mainnet
+  }
+  if (process.env.SOL_NETWORK === "devnet") {
+    return networks.devnet
+  }
+  if (process.env.SOL_NETWORK === "localhost") {
+    return networks.localhost
+  }
+
   return initialState.common.network
 
 }
@@ -44,11 +54,8 @@ export function getWallet(walletFile: string | null) : NodeWallet {
 }
 
 export function getConnection() : Connection {
-  const opts: ConfirmOptions = {
-    preflightCommitment: "recent",
-    commitment: "recent",
-  };
-  return new Connection(initialState.common.network.url, opts.preflightCommitment);
+  const opts: ConfirmOptions = {preflightCommitment: "recent",commitment: "recent",};
+  return new Connection(getNetwork().url, opts.preflightCommitment);
 }
 
 export function getProvider(walletFile: string | null) : Provider {
