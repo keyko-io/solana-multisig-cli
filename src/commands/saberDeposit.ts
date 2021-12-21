@@ -1,67 +1,48 @@
-import {Command, flags} from '@oclif/command'
 import {PublicKey} from "@solana/web3.js";
-import {initialState, poolTokens} from "../multisig/types";
-import {MultisigInstance} from "../multisig/multisigInstance";
-import {getNetwork} from "../multisig/util";
+import {MultisigInstance} from "../multisigInstance";
+import {getConnection} from "../common/util";
+import {Saber} from "../instructions/saber";
+import {BaseCommand} from "../common/baseCommand";
 
-export default class SaberDeposit extends Command {
+export default class SaberDeposit extends BaseCommand {
   static description = 'Deposit tokens into a Saber pool.'
 
   static examples = [
-    `$ sol-multisig saberDeposit 10 10 1
-
+    `$ sol-multisig saberDeposit VeNkoB1HvSP6bSeGybQDnx9wTWFsQb2NBCemeCDSuKL 10 10 1
 `,
   ]
 
   static flags = {
-    help: flags.help({char: 'h'}),
-    multisig: flags.string({char: 'm', description: 'multisig account'}),
+    ...BaseCommand.allFlags
   }
 
-  static args = [{name: 'amountA'}, {name: 'amountB'}, {name: 'minPoolAmount'}]
+  static args = [{name: 'swapAccount'}, {name: 'amountA'}, {name: 'amountB'}, {name: 'minPoolAmount'}]
 
   async run() {
     const {args, flags} = this.parse(SaberDeposit)
-    let multisig = getNetwork().multisigUpgradeAuthority
-    if (flags.multisig) {
-      multisig = new PublicKey(flags.multisig)
-    }
-    if (!multisig) {
-      this.error('multisig is not found in config and not supplied in flags.')
+    if (!args.swapAccount) {
+      this.error('`swapAccount` arg is missing.')
       this.exit(1)
     }
     if (!args.amountA) {
-      this.error('amountA is required.')
+      this.error('amountA is missing.')
       this.exit(1)
     }
     if (!args.amountB) {
-      this.error('amountB is required.')
+      this.error('amountB is missing.')
       this.exit(1)
     }
     if (!args.minPoolAmount) {
-      this.error('minPoolAmount is required.')
+      this.error('minPoolAmount is missing.')
       this.exit(1)
     }
     const amountA = parseFloat(args.amountA)
     const amountB = parseFloat(args.amountB)
     const amountPoolMin = parseFloat(args.minPoolAmount)
-    const multisigInst = new MultisigInstance(multisig)
-    // multisigInst.directSaberDepositTokens(
-    //   new PublicKey(poolTokens.usdc_usdt.swapAccount),
-    //   new PublicKey(poolTokens.usdc_usdt.authority),
-    //   // poolTokens.usdc_usdt.poolToken,
-    //   // poolTokens.usdc_usdt.tokenA,
-    //   // poolTokens.usdc_usdt.tokenB,
-    //   amountA,
-    //   amountB,
-    //   amountPoolMin
-    // )
-    multisigInst.saberDepositTokens(
-      new PublicKey(poolTokens.usdc_usdt.swapAccount),
-      new PublicKey(poolTokens.usdc_usdt.authority),
-      // poolTokens.usdc_usdt.poolToken,
-      // poolTokens.usdc_usdt.tokenA,
-      // poolTokens.usdc_usdt.tokenB,
+    const multisigInst: MultisigInstance = await this.getMultisigInstance(flags, args)
+    const saberInst = new Saber(multisigInst, multisigInst.signer(), getConnection())
+    saberInst.depositTokens(
+      new PublicKey(args.swapAccount),
       amountA,
       amountB,
       amountPoolMin

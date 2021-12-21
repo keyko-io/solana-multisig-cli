@@ -5,10 +5,6 @@ import * as splToken from "@solana/spl-token";
 export const DEFAULT_PUB_KEY = new PublicKey("11111111111111111111111111111111");
 
 export type State = {
-  common: CommonState;
-};
-
-export type CommonState = {
   walletProvider?: string;
   isWalletConnected: boolean;
   network: Network;
@@ -95,14 +91,10 @@ export const poolTokens = {
 }
 
 export const initialState: State = {
-  common: {
-    isWalletConnected: false,
-    walletProvider: "https://www.sollet.io",
-    network: networks.devnet,
-  },
+  isWalletConnected: false,
+  walletProvider: "https://www.sollet.io",
+  network: networks.devnet,
 };
-
-type Networks = { [label: string]: Network };
 
 export type Network = {
   // Cluster.
@@ -113,3 +105,4 @@ export type Network = {
   multisigUpgradeAuthority?: PublicKey;
 };
 
+type Networks = { [label: string]: Network };

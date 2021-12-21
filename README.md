@@ -34,10 +34,10 @@ USAGE
 * [`sol-multisig execute [TRANSACTION]`](#sol-multisig-execute-transaction)
 * [`sol-multisig help [COMMAND]`](#sol-multisig-help-command)
 * [`sol-multisig listSigners`](#sol-multisig-listsigners)
-* [`sol-multisig listTx [MULTISIG]`](#sol-multisig-listtx-multisig)
-* [`sol-multisig saberDeposit [AMOUNTA] [AMOUNTB] [MINPOOLAMOUNT]`](#sol-multisig-saberdeposit-amounta-amountb-minpoolamount)
-* [`sol-multisig saberWithdraw [POOLAMOUNT] [MINAMOUNTA] [MINAMOUNTB]`](#sol-multisig-saberwithdraw-poolamount-minamounta-minamountb)
-* [`sol-multisig transferTokens [TOKEN] [AMOUNT]`](#sol-multisig-transfertokens-token-amount)
+* [`sol-multisig listTx`](#sol-multisig-listtx)
+* [`sol-multisig saberDeposit [SWAPACCOUNT] [AMOUNTA] [AMOUNTB] [MINPOOLAMOUNT]`](#sol-multisig-saberdeposit-swapaccount-amounta-amountb-minpoolamount)
+* [`sol-multisig saberWithdraw [SWAPACCOUNT] [POOLAMOUNT] [MINAMOUNTA] [MINAMOUNTB]`](#sol-multisig-saberwithdraw-swapaccount-poolamount-minamounta-minamountb)
+* [`sol-multisig transferTokens [TOKEN] [AMOUNT] [DESTINATION]`](#sol-multisig-transfertokens-token-amount-destination)
 
 ## `sol-multisig approve [TRANSACTION]`
 
@@ -47,13 +47,16 @@ Approve (sign) an existing transaction.
 USAGE
   $ sol-multisig approve [TRANSACTION]
 
+ARGUMENTS
+  TRANSACTION  the transaction`s publickey
+
 OPTIONS
-  -h, --help                       show CLI help
-  -m, --multisig=multisig          multisig account (publicKey)
-  -s, --signerWallet=signerWallet  path to wallet file of signer approving the transaction
+  -h, --help               show CLI help
+  -m, --multisig=multisig  multisig account (publicKey)
+  -s, --signer=signer      path to wallet file of payer for the transaction
 
 EXAMPLE
-  $ sol-multisig approve DbnEfsCR6gSk2Doqr8chiS8Uus2sizUn4H8zg6iU7Lkr CqJTr3je2ENaenVtZDboVDTVPioFUmMuQNu4N5XeFWmh
+  $ sol-multisig approve CqJTr3je2ENaenVtZDboVDTVPioFUmMuQNu4N5XeFWmh -m DbnEfsCR6gSk2Doqr8chiS8Uus2sizUn4H8zg6iU7Lkr
 ```
 
 _See code: [src/commands/approve.ts](https://github.com/keyko-io/solana-multisig-cli/blob/v0.0.1/src/commands/approve.ts)_
@@ -68,7 +71,7 @@ USAGE
 
 OPTIONS
   -h, --help                         show CLI help
-  -p, --participants=participants    public keys of this multisig signers
+  -s, --signer=signer                path to wallet file of payer for the transaction
 
   -t, --threshold=threshold          [default: 2] multisig threshold, minimum number of signers required to execute a
                                      transaction (DEFAULT=2).
@@ -76,8 +79,7 @@ OPTIONS
   -x, --maxNumSigners=maxNumSigners  [default: 10] max number of signers in the multisig (DEFAULT=10).
 
 EXAMPLE
-  $ sol-multisig create "ACC1,ACC2,ACC3"
-  tx: 0x....
+  $ sol-multisig create "SIGNER_ACC1,SIGNER_ACC2,SIGNER_ACC3" -t 2 -x 9
 ```
 
 _See code: [src/commands/create.ts](https://github.com/keyko-io/solana-multisig-cli/blob/v0.0.1/src/commands/create.ts)_
@@ -91,12 +93,12 @@ USAGE
   $ sol-multisig execute [TRANSACTION]
 
 OPTIONS
-  -h, --help                   show CLI help
-  -m, --multisig=multisig      multisig account (publicKey)
-  -s, --fromWallet=fromWallet  path to wallet file of payer executing the transaction
+  -h, --help               show CLI help
+  -m, --multisig=multisig  multisig account (publicKey)
+  -s, --signer=signer      path to wallet file of payer for the transaction
 
 EXAMPLE
-  $ sol-multisig execute CqJTr3je2ENaenVtZDboVDTVPioFUmMuQNu4N5XeFWmh --fromWallet ~/.config/solana/id.json
+  $ sol-multisig execute CqJTr3je2ENaenVtZDboVDTVPioFUmMuQNu4N5XeFWmh --signer=~/.config/solana/id.json
 ```
 
 _See code: [src/commands/execute.ts](https://github.com/keyko-io/solana-multisig-cli/blob/v0.0.1/src/commands/execute.ts)_
@@ -116,7 +118,7 @@ OPTIONS
   --all  see all commands in CLI
 ```
 
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v3.2.15/src/commands/help.ts)_
+_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v3.2.3/src/commands/help.ts)_
 
 ## `sol-multisig listSigners`
 
@@ -129,92 +131,91 @@ USAGE
 OPTIONS
   -h, --help               show CLI help
   -m, --multisig=multisig  multisig account (publicKey)
+  -s, --signer=signer      path to wallet file of payer for the transaction
   -t, --token=token        token mint (publicKey)
 
 EXAMPLE
-  $ sol-multisig listSigners DbnEfsCR6gSk2Doqr8chiS8Uus2sizUn4H8zg6iU7Lkr
+  $ sol-multisig listSigners -m DbnEfsCR6gSk2Doqr8chiS8Uus2sizUn4H8zg6iU7Lkr
 ```
 
 _See code: [src/commands/listSigners.ts](https://github.com/keyko-io/solana-multisig-cli/blob/v0.0.1/src/commands/listSigners.ts)_
 
-## `sol-multisig listTx [MULTISIG]`
+## `sol-multisig listTx`
 
-List all pending transactions for the given multisig account.
+List all transactions for the given multisig account.
 
 ```
 USAGE
-  $ sol-multisig listTx [MULTISIG]
+  $ sol-multisig listTx
 
 OPTIONS
-  -h, --help  show CLI help
+  -h, --help               show CLI help
+  -m, --multisig=multisig  multisig account (publicKey)
+  -s, --signer=signer      path to wallet file of payer for the transaction
 
 EXAMPLE
-  $ sol-multisig listTx
-  tx: 0x....
+  $ sol-multisig listTx -m DbnEfsCR6gSk2Doqr8chiS8Uus2sizUn4H8zg6iU7Lkr
 ```
 
 _See code: [src/commands/listTx.ts](https://github.com/keyko-io/solana-multisig-cli/blob/v0.0.1/src/commands/listTx.ts)_
 
-## `sol-multisig saberDeposit [AMOUNTA] [AMOUNTB] [MINPOOLAMOUNT]`
+## `sol-multisig saberDeposit [SWAPACCOUNT] [AMOUNTA] [AMOUNTB] [MINPOOLAMOUNT]`
 
 Deposit tokens into a Saber pool.
 
 ```
 USAGE
-  $ sol-multisig saberDeposit [AMOUNTA] [AMOUNTB] [MINPOOLAMOUNT]
+  $ sol-multisig saberDeposit [SWAPACCOUNT] [AMOUNTA] [AMOUNTB] [MINPOOLAMOUNT]
 
 OPTIONS
   -h, --help               show CLI help
-  -m, --multisig=multisig  multisig account
+  -m, --multisig=multisig  multisig account (publicKey)
+  -s, --signer=signer      path to wallet file of payer for the transaction
 
 EXAMPLE
-  $ sol-multisig saberDeposit 10 10 1
+  $ sol-multisig saberDeposit VeNkoB1HvSP6bSeGybQDnx9wTWFsQb2NBCemeCDSuKL 10 10 1
 ```
 
 _See code: [src/commands/saberDeposit.ts](https://github.com/keyko-io/solana-multisig-cli/blob/v0.0.1/src/commands/saberDeposit.ts)_
 
-## `sol-multisig saberWithdraw [POOLAMOUNT] [MINAMOUNTA] [MINAMOUNTB]`
+## `sol-multisig saberWithdraw [SWAPACCOUNT] [POOLAMOUNT] [MINAMOUNTA] [MINAMOUNTB]`
 
 Withdraw tokens from a Saber pool.
 
 ```
 USAGE
-  $ sol-multisig saberWithdraw [POOLAMOUNT] [MINAMOUNTA] [MINAMOUNTB]
+  $ sol-multisig saberWithdraw [SWAPACCOUNT] [POOLAMOUNT] [MINAMOUNTA] [MINAMOUNTB]
 
 OPTIONS
   -a, --destA=destA        destination account for token A
   -b, --destB=destB        destination account for token B
   -h, --help               show CLI help
-  -m, --multisig=multisig  multisig account
+  -m, --multisig=multisig  multisig account (publicKey)
+  -s, --signer=signer      path to wallet file of payer for the transaction
 
 EXAMPLE
-  $ sol-multisig saberWithdraw 1 2 2
+  $ sol-multisig saberWithdraw VeNkoB1HvSP6bSeGybQDnx9wTWFsQb2NBCemeCDSuKL 1 2 2
 ```
 
 _See code: [src/commands/saberWithdraw.ts](https://github.com/keyko-io/solana-multisig-cli/blob/v0.0.1/src/commands/saberWithdraw.ts)_
 
-## `sol-multisig transferTokens [TOKEN] [AMOUNT]`
+## `sol-multisig transferTokens [TOKEN] [AMOUNT] [DESTINATION]`
 
 Submit a transaction to transfer tokens via the multisig wallet.
 
 ```
 USAGE
-  $ sol-multisig transferTokens [TOKEN] [AMOUNT]
+  $ sol-multisig transferTokens [TOKEN] [AMOUNT] [DESTINATION]
 
 OPTIONS
-  -a, --amount=amount            amount of tokens to transfer
-  -d, --destination=destination  token account of recipient or recipient pubkey
-  -f, --from=from                source pubkey
-  -h, --help                     show CLI help
-  -m, --multisig=multisig        multisig account
+  -f, --from=from          source pubkey
+  -h, --help               show CLI help
+  -m, --multisig=multisig  multisig account (publicKey)
+  -s, --signer=signer      path to wallet file of payer for the transaction
 
 EXAMPLE
-  $ sol-multisig transferTokens DbnEfsCR6gSk2Doqr8chiS8Uus2sizUn4H8zg6iU7Lkr 5 -d 
-  BdKK9PrvtUTZV4apffYYy9q4Ys4ZxVZnZZESQYmw8B3b
+  $ sol-multisig transferTokens <token-mint> <amount-float> <destination-token-account>
 ```
 
 _See code: [src/commands/transferTokens.ts](https://github.com/keyko-io/solana-multisig-cli/blob/v0.0.1/src/commands/transferTokens.ts)_
 <!-- commandsstop -->
-
-
-USDT: address =

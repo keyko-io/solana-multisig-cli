@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
+    "noImplicitAny": false,
     "declaration": true,
     "importHelpers": true,
     "module": "commonjs",
@@ -10,6 +11,7 @@
     "target": "ES6" //es2017"
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "index.d.ts"
   ]
 }

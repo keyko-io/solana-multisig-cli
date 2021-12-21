@@ -1,8 +1,11 @@
 {
   "name": "sol-multisig-cli",
+  "author": {
+    "name": "keyko"
+  },
   "description": "CLI to manage Solana transactions using multisig.",
   "version": "0.0.1",
-  "author": "ssallam @ssallam",
+  "main": "lib/index.js",
   "bin": {
     "sol-multisig": "./bin/run"
   },
@@ -16,8 +19,8 @@
     "@project-serum/common": "^0.0.1-beta.3",
     "@project-serum/sol-wallet-adapter": "^0.2.0",
     "@saberhq/stableswap-sdk": "^1.10.5",
-    "@solana/buffer-layout": "^4.0.0",
-    "@solana/spl-token": "^0.1.3",
+    "@solana/spl-token": "^0.1.8",
+    "@solana/spl-token-registry": "^0.2.819",
     "@types/big.js": "^6.1.2",
     "atob": "",
     "bip39": "",
@@ -25,6 +28,7 @@
     "bs58": "",
     "buffer": "6.0.3",
     "buffer-layout": "^1.2.2",
+    "ed25519-hd-key": "^1.2.0",
     "hex-to-32": "",
     "inquirer": "^8.2.0",
     "js-base64": "^3.6.0",
@@ -37,7 +41,6 @@
     "@oclif/dev-cli": "^1",
     "@oclif/test": "^1",
     "@types/chai": "^4",
-    "@types/inquirer": "^8.1.3",
     "@types/mocha": "^5",
     "@types/node": "^10",
     "chai": "^4",
@@ -62,10 +65,12 @@
   ],
   "homepage": "https://github.com/keyko-io/solana-multisig-cli",
   "keywords": [
-    "oclif"
+    "multisig",
+    "token",
+    "saber",
+    "solana"
   ],
   "license": "MIT",
-  "main": "lib/index.js",
   "oclif": {
     "commands": "./lib/commands",
     "bin": "sol-multisig",
@@ -73,13 +78,17 @@
       "@oclif/plugin-help"
     ]
   },
-  "repository": "keyko-io/solana-multisig-cli",
+  "repository": {
+    "type": "git",
+    "url": "keyko-io/solana-multisig-cli"
+  },
   "scripts": {
     "postpack": "rm -f oclif.manifest.json",
     "posttest": "eslint . --ext .ts --config .eslintrc",
     "prepack": "rm -rf lib && tsc -b && oclif-dev manifest && oclif-dev readme",
     "test": "nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif-dev readme && git add README.md"
+    "version": "oclif-dev readme && git add README.md",
+    "tsc": "tsc -b ."
   },
   "types": "lib/index.d.ts"
 }

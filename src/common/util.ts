@@ -16,14 +16,11 @@ import MultisigIdl from "../idl";
 import {initialState, networks} from "./types";
 import {NodeWallet} from "./NodeWallet";
 const path = require('path');
-// Based on this solution: https://www.reddit.com/r/KinFoundation/comments/j7qejf/quick_guide_on_converting_kin_keypair_ready_for/
 // @ts-ignore
-import hexTo32 from 'hex-to-32'
+import * as bs58 from "bs58";
 // @ts-ignore
-import atob from 'atob'
-// @ts-ignore
-import bs58 from 'bs58'
-
+import * as bip39 from "bip39";
+import { derivePath } from "ed25519-hd-key";
 
 export function resolveHome(filepath: string) : string {
   return (filepath[0] === '~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath
@@ -40,7 +37,7 @@ export function getNetwork(): any {
     return networks.localhost
   }
 
-  return initialState.common.network
+  return initialState.network
 
 }
 
@@ -64,7 +61,6 @@ export function getProvider(walletFile: string | null) : Provider {
     commitment: "recent",
   };
 
-  const network = getNetwork();
   const connection = getConnection();
   const wallet = getWallet(walletFile);
   return new Provider(connection, wallet, opts);
@@ -78,4 +74,19 @@ export function getMultisigClient(walletFile: string | null) : Program {
   );
 
   return multisigClient;
+}
+
+export function getWalletFromPhantomSeedWords(seedWords: string): NodeWallet {
+  const seed = bip39.mnemonicToSeedSync(seedWords, "")
+  const path = `m/44'/501'/0'/0'`;
+  const keypair = Keypair.fromSeed(derivePath(path, seed.toString("hex")).key);
+  // console.log(`${path} => ${keypair.publicKey.toBase58()}`);
+  // console.log(`${keypair.publicKey.toBase58()}`)
+  return new NodeWallet(keypair);
+}
+
+export function getWalletFromPhantomKey(privateKey: string): NodeWallet {
+  const keypair = Keypair.fromSecretKey(bs58.decode(privateKey))
+  // console.log(`pubkey is:  ${keypair.publicKey.toString()}`)
+  return new NodeWallet(keypair);
 }

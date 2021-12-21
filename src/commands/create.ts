@@ -1,22 +1,19 @@
-import {Command, flags} from '@oclif/command'
+import {flags} from '@oclif/command'
 import {PublicKey} from "@solana/web3.js";
-import {initialState} from "../multisig/types";
-import {MultisigInstance} from "../multisig/multisigInstance";
-import {getNetwork} from "../multisig/util";
+import {MultisigInstance} from "../multisigInstance";
+import {getNetwork} from "../common/util";
+import {BaseCommand} from "../common/baseCommand";
 
-export default class Create extends Command {
+export default class Create extends BaseCommand {
   static description = 'Create a new multisig account.'
 
   static examples = [
-    `$ sol-multisig create "ACC1,ACC2,ACC3"
-tx: 0x....
-
+    `$ sol-multisig create "SIGNER_ACC1,SIGNER_ACC2,SIGNER_ACC3" -t 2 -x 9
 `,
   ]
 
   static flags = {
-    help: flags.help({char: 'h'}),
-    participants: flags.string({char: 'p', description: 'public keys of this multisig signers'}),
+    ...BaseCommand.baseFlags,
     threshold: flags.integer({
       char: 't',
       default: 2,
@@ -25,7 +22,7 @@ tx: 0x....
     maxNumSigners: flags.integer({
       char: 'x',
       default: 10,
-      description: 'max number of signers in the multisig (DEFAULT=10).'}),
+      description: 'max number of signers in the multisig (DEFAULT=10).'})
   }
 
   static args = [{name: 'participants'}]
@@ -34,12 +31,11 @@ tx: 0x....
     const {args, flags} = this.parse(Create)
     this.log(`network is ${getNetwork().url}`)
 
-    if (!args.participants && !flags.participants) {
+    if (!args.participants) {
       this.log('"participants" must be provided as an argument or in the -p (--participants) flag.')
       this.exit(1)
     }
-    let participantsStr = args.participants ? args.participants : flags.participants
-    const participants = participantsStr.split(',')
+    const participants = args.participants.split(',')
     this.log(`got participants: ${participants.length}, ${participants}`)
     const maxSigners = flags.maxNumSigners >= 5 ? flags.maxNumSigners : 5
     const threshold = flags.threshold > 2 ? flags.threshold : 2
@@ -62,6 +58,6 @@ tx: 0x....
 
     const multisigInst = new MultisigInstance(null)
     const newMultisig = await multisigInst.createMultisig(participants, maxSigners, threshold)
-    this.log(`created new multisig: pubkey ${newMultisig}`)
+    this.log(`created new multisig: pubkey ${newMultisig} at programId ${multisigInst.multisigClient.programId}`)
   }
 }
