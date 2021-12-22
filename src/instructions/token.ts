@@ -5,14 +5,14 @@ import {
   Transaction,
   TransactionInstruction,
   sendAndConfirmTransaction} from '@solana/web3.js'
-import * as splToken from '@solana/spl-token'
-// @ts-ignore
+import * as SplToken from '@solana/spl-token'
 import * as BufferLayout from 'buffer-layout'
-import {MultisigInstance} from '../multisigInstance'
+import {MultisigInstance} from '../multisig-instance'
 
 const FAILED_TO_FIND_ACCOUNT = 'Failed to find account'
 const INVALID_ACCOUNT_OWNER = 'Invalid account owner'
 
+const U64 = SplToken.u64
 const uint64 = (property = 'uint64') => {
   return BufferLayout.blob(8, property)
 }
@@ -32,8 +32,8 @@ export class Token {
     Initialize a token account
    */
   async initializeTokenAccount(token: PublicKey, account: PublicKey): Promise<string> {
-    const mintToken = new splToken.Token(this.connection, token, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const associatedAddress = await splToken.Token.getAssociatedTokenAddress(
+    const mintToken = new SplToken.Token(this.connection, token, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const associatedAddress = await SplToken.Token.getAssociatedTokenAddress(
       mintToken.associatedProgramId, mintToken.programId, mintToken.publicKey, account, true,
     )
     console.info(`about to do InitAccount: 
@@ -48,7 +48,7 @@ export class Token {
         try {
           const transaction = new Transaction()
           transaction.add(
-            splToken.Token.createAssociatedTokenAccountInstruction(
+            SplToken.Token.createAssociatedTokenAccountInstruction(
               mintToken.associatedProgramId, mintToken.programId, mintToken.publicKey, associatedAddress, account, this.signer.publicKey,
             ))
           await sendAndConfirmTransaction(this.connection, transaction, [this.signer])
@@ -65,8 +65,8 @@ export class Token {
   }
 
   async getAssociatedTokenAccount(token: PublicKey, account: PublicKey): Promise<string> {
-    const mintToken = new splToken.Token(this.connection, token, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const associatedAddress = await splToken.Token.getAssociatedTokenAddress(
+    const mintToken = new SplToken.Token(this.connection, token, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const associatedAddress = await SplToken.Token.getAssociatedTokenAddress(
       mintToken.associatedProgramId, mintToken.programId, mintToken.publicKey, account, true,
     )
     return associatedAddress.toString()
@@ -87,17 +87,16 @@ export class Token {
     if (source === null) {
       // source is the multisigSigner TokenAccount
       const associatedAddress = await this.initializeTokenAccount(token, multisigSigner)
-      // @ts-ignore
       source = new PublicKey(associatedAddress)
       console.info(`multisigSigner - associatedTokenAddress: ${source}`)
     }
 
-    const mintToken = new splToken.Token(this.connection, token, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const base_tokenAmount = 10 ** (await mintToken.getMintInfo()).decimals * tokenAmount
+    const mintToken = new SplToken.Token(this.connection, token, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const baseTokenAmount = (10 ** (await mintToken.getMintInfo()).decimals) * tokenAmount
     // the programId of the solana token program, this is always the same
-    const programId = splToken.TOKEN_PROGRAM_ID
+    const programId = SplToken.TOKEN_PROGRAM_ID
     // TODO: convert amount by multiplying by the token decimals
-    const data = this.createTransferData(base_tokenAmount)
+    const data = this.createTransferData(baseTokenAmount)
     console.info(`multisig: ${this.multisigInstance.multisig}`)
     console.info(`multisigSigner: ${multisigSigner} , nonce: ${nonce}`)
     console.info(`multisigSigner-associatedTokenAddress: ${source}`)
@@ -117,7 +116,7 @@ export class Token {
     }]
 
     const txSize = 1000 // 432 bytes should be sufficient, but will use 1000 for now
-    return await this.multisigInstance.sendTransaction(
+    return this.multisigInstance.sendTransaction(
       'Token transfer',
       programId,
       keys,
@@ -127,15 +126,15 @@ export class Token {
   }
 
   async directTransferTokens(senderPubkey: PublicKey, destination: PublicKey, tokenAddress: string, amount: number): Promise<string> {
-    const programId = splToken.TOKEN_PROGRAM_ID
+    const programId = SplToken.TOKEN_PROGRAM_ID
     const tokenPubkey = new PublicKey(tokenAddress)
     const owner = this.signer
-    const mintToken = new splToken.Token(this.connection, tokenPubkey, programId, owner)
+    const mintToken = new SplToken.Token(this.connection, tokenPubkey, programId, owner)
     // const senderPubkey = this.multisigClient.provider.wallet.publicKey
-    const source = await splToken.Token.getAssociatedTokenAddress(
+    const source = await SplToken.Token.getAssociatedTokenAddress(
       mintToken.associatedProgramId, mintToken.programId, mintToken.publicKey, senderPubkey,
     )
-    const data = this.createTransferData(10 ** (await mintToken.getMintInfo()).decimals * amount)
+    const data = this.createTransferData((10 ** (await mintToken.getMintInfo()).decimals) * amount)
 
     const keys = [{
       pubkey: source,
@@ -172,8 +171,7 @@ export class Token {
     ])
 
     const data = Buffer.alloc(dataLayout.span)
-    // @ts-ignore
-    const a = new splToken.u64(amount)
+    const a = new U64(amount)
     dataLayout.encode(
       {
         instruction: 3, // Transfer instruction

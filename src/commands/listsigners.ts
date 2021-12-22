@@ -1,10 +1,10 @@
 import {flags} from '@oclif/command'
 import {PublicKey} from '@solana/web3.js'
 import * as splToken from '@solana/spl-token'
-import {MultisigInstance} from '../multisigInstance'
+import {MultisigInstance} from '../multisig-instance'
 import {Token} from '../instructions/token'
 import {getConnection} from '../common/util'
-import {BaseCommand} from '../common/baseCommand'
+import {BaseCommand} from '../common/base-command'
 
 export default class ListSigners extends BaseCommand {
   static description = 'List the signers of the specified multisig wallet.'

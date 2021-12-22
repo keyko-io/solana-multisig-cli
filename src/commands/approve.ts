@@ -1,5 +1,5 @@
-import {MultisigInstance} from '../multisigInstance'
-import {BaseCommand} from '../common/baseCommand'
+import {MultisigInstance} from '../multisig-instance'
+import {BaseCommand} from '../common/base-command'
 
 export default class Approve extends BaseCommand {
   static description = 'Approve (sign) an existing transaction.'

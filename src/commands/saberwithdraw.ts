@@ -2,8 +2,8 @@ import {flags} from '@oclif/command'
 import {PublicKey} from '@solana/web3.js'
 import {getConnection} from '../common/util'
 import {Saber} from '../instructions/saber'
-import {BaseCommand} from '../common/baseCommand'
-import {MultisigInstance} from '../multisigInstance'
+import {BaseCommand} from '../common/base-command'
+import {MultisigInstance} from '../multisig-instance'
 
 export default class SaberWithdraw extends BaseCommand {
   static description = 'Withdraw tokens from a Saber pool.'

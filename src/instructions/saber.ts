@@ -4,11 +4,13 @@ import {
   PublicKey,
   Transaction,
   sendAndConfirmTransaction} from '@solana/web3.js'
-import * as splToken from '@solana/spl-token'
+import * as SplToken from '@solana/spl-token'
 import * as saber from '@saberhq/stableswap-sdk'
 import {stableSwapConfig} from '../common/types'
-import {MultisigInstance} from '../multisigInstance'
+import {MultisigInstance} from '../multisig-instance'
 import {Token} from './token'
+
+const U64 = SplToken.u64
 
 export class Saber {
   multisigInstance: MultisigInstance;
@@ -32,10 +34,10 @@ export class Saber {
     console.log(`swap auth: ${swapAuthority}\n  swap acc: ${swapAccount}`)
     const tokenAMint = swap.state.tokenA.mint
     const tokenBMint = swap.state.tokenB.mint
-    const mintTokenA = new splToken.Token(this.connection, tokenAMint, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const mintTokenB = new splToken.Token(this.connection, tokenBMint, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const base_tokenAmountA = 10 ** (await mintTokenA.getMintInfo()).decimals * tokenAmountA
-    const base_tokenAmountB = 10 ** (await mintTokenB.getMintInfo()).decimals * tokenAmountB
+    const mintTokenA = new SplToken.Token(this.connection, tokenAMint, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const mintTokenB = new SplToken.Token(this.connection, tokenBMint, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const baseTokenAmountA = (10 ** (await mintTokenA.getMintInfo()).decimals) * tokenAmountA
+    const baseTokenAmountB = (10 ** (await mintTokenB.getMintInfo()).decimals) * tokenAmountB
 
     const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
       [this.multisigInstance.multisig.toBuffer()],
@@ -52,8 +54,8 @@ export class Saber {
     )
 
     const poolTokenMint = swap.state.poolTokenMint
-    const mintPoolToken = new splToken.Token(this.connection, poolTokenMint, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const base_minimumPoolTokenAmount = 10 ** (await mintPoolToken.getMintInfo()).decimals * minimumPoolTokenAmount
+    const mintPoolToken = new SplToken.Token(this.connection, poolTokenMint, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const baseMinimumPoolTokenAmount = (10 ** (await mintPoolToken.getMintInfo()).decimals) * minimumPoolTokenAmount
     const poolTokenAccount = new PublicKey(await tokenInstance.initializeTokenAccount(poolTokenMint, multisigSigner))
     const saberProgramId = saber.SWAP_PROGRAM_ID
 
@@ -63,7 +65,7 @@ export class Saber {
       authority: swapAuthority,
       tokenProgramID: stableSwapConfig.tokenProgramID,
     }
-    const tx_depositInstruction = saber.depositInstruction(
+    const txDepositInstruction = saber.depositInstruction(
       {
         config,
         userAuthority: multisigSigner,
@@ -73,12 +75,9 @@ export class Saber {
         tokenAccountB: tokenBReserve,
         poolTokenMint,
         poolTokenAccount,
-        // @ts-ignore
-        tokenAmountA: new splToken.u64(base_tokenAmountA),
-        // @ts-ignore
-        tokenAmountB: new splToken.u64(base_tokenAmountB),
-        // @ts-ignore
-        minimumPoolTokenAmount: new splToken.u64(base_minimumPoolTokenAmount),
+        tokenAmountA: new U64(baseTokenAmountA),
+        tokenAmountB: new U64(baseTokenAmountB),
+        minimumPoolTokenAmount: new U64(baseMinimumPoolTokenAmount),
       },
     )
 
@@ -87,11 +86,11 @@ export class Saber {
     console.info(`tokens: ${sourceA.toString()}, ${sourceB.toString()}, ${poolTokenAccount.toString()}`)
 
     const txSize = 3000 // TODO: calculate the required size without making it too large
-    return await this.multisigInstance.sendTransaction(
+    return this.multisigInstance.sendTransaction(
       'Saber deposit tokens',
-      tx_depositInstruction.programId,
-      tx_depositInstruction.keys,
-      tx_depositInstruction.data,
+      txDepositInstruction.programId,
+      txDepositInstruction.keys,
+      txDepositInstruction.data,
       txSize,
     )
   }
@@ -110,10 +109,10 @@ export class Saber {
     const tokenAMint = swap.state.tokenA.mint
     const tokenBMint = swap.state.tokenB.mint
 
-    const tokenAInstance = new splToken.Token(this.connection, tokenAMint, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const tokenBInstance = new splToken.Token(this.connection, tokenBMint, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const base_minimumTokenAmountA = 10 ** (await tokenAInstance.getMintInfo()).decimals * minimumTokenAmountA
-    const base_minimumTokenAmountB = 10 ** (await tokenBInstance.getMintInfo()).decimals * minimumTokenAmountB
+    const tokenAInstance = new SplToken.Token(this.connection, tokenAMint, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const tokenBInstance = new SplToken.Token(this.connection, tokenBMint, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const baseMinimumTokenAmountA = (10 ** (await tokenAInstance.getMintInfo()).decimals) * minimumTokenAmountA
+    const baseMinimumTokenAmountB = (10 ** (await tokenBInstance.getMintInfo()).decimals) * minimumTokenAmountB
 
     const tokenInstance = new Token(this.multisigInstance, this.signer, this.connection)
     const [multisigSigner, nonce] = await PublicKey.findProgramAddress(
@@ -136,8 +135,8 @@ export class Saber {
     )
 
     const poolTokenMint = swap.state.poolTokenMint
-    const mintPoolToken = new splToken.Token(this.connection, poolTokenMint, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const base_poolTokenAmount = 10 ** (await mintPoolToken.getMintInfo()).decimals * poolTokenAmount
+    const mintPoolToken = new SplToken.Token(this.connection, poolTokenMint, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const basePoolTokenAmount = (10 ** (await mintPoolToken.getMintInfo()).decimals) * poolTokenAmount
     const poolTokenAccount = new PublicKey(await tokenInstance.initializeTokenAccount(poolTokenMint, multisigSigner))
     const saberProgramId = saber.SWAP_PROGRAM_ID
 
@@ -147,7 +146,7 @@ export class Saber {
       authority: swapAuthority,
       tokenProgramID: stableSwapConfig.tokenProgramID,
     }
-    const tx_withdrawInstruction = saber.withdrawInstruction(
+    const txWithdrawInstruction = saber.withdrawInstruction(
       {
         config: config,
         userAuthority: multisigSigner,
@@ -159,12 +158,9 @@ export class Saber {
         userAccountB: userAccountB,
         adminFeeAccountA: swap.state.tokenA.adminFeeAccount,
         adminFeeAccountB: swap.state.tokenB.adminFeeAccount,
-        // @ts-ignore
-        poolTokenAmount: new splToken.u64(base_poolTokenAmount),
-        // @ts-ignore
-        minimumTokenA: new splToken.u64(base_minimumTokenAmountA),
-        // @ts-ignore
-        minimumTokenB: new splToken.u64(base_minimumTokenAmountB),
+        poolTokenAmount: new U64(basePoolTokenAmount),
+        minimumTokenA: new U64(baseMinimumTokenAmountA),
+        minimumTokenB: new U64(baseMinimumTokenAmountB),
       },
     )
 
@@ -173,11 +169,11 @@ export class Saber {
     console.info(`tokens: ${userAccountA.toString()}, ${userAccountB.toString()}, ${poolTokenAccount.toString()}`)
 
     const txSize = 3000 // TODO: calculate the required size without making it too large
-    return await this.multisigInstance.sendTransaction(
+    return this.multisigInstance.sendTransaction(
       'Saber withdraw tokens',
-      tx_withdrawInstruction.programId,
-      tx_withdrawInstruction.keys,
-      tx_withdrawInstruction.data,
+      txWithdrawInstruction.programId,
+      txWithdrawInstruction.keys,
+      txWithdrawInstruction.data,
       txSize,
     )
   }
@@ -194,10 +190,10 @@ export class Saber {
     const tokenAMint = swap.state.tokenA.mint
     const tokenBMint = swap.state.tokenB.mint
 
-    const mintTokenA = new splToken.Token(this.connection, tokenAMint, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const mintTokenB = new splToken.Token(this.connection, tokenBMint, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const base_tokenAmountA = 10 ** (await mintTokenA.getMintInfo()).decimals * tokenAmountA
-    const base_tokenAmountB = 10 ** (await mintTokenB.getMintInfo()).decimals * tokenAmountB
+    const mintTokenA = new SplToken.Token(this.connection, tokenAMint, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const mintTokenB = new SplToken.Token(this.connection, tokenBMint, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const baseTokenAmountA = (10 ** (await mintTokenA.getMintInfo()).decimals) * tokenAmountA
+    const baseTokenAmountB = (10 ** (await mintTokenB.getMintInfo()).decimals) * tokenAmountB
 
     const tokenInstance = new Token(this.multisigInstance, this.signer, this.connection)
     const sourceA = new PublicKey(await tokenInstance.initializeTokenAccount(tokenAMint, this.signer.publicKey))
@@ -207,8 +203,8 @@ export class Saber {
     const tokenAccountB = swap.state.tokenB.reserve
 
     const poolTokenMint = swap.state.poolTokenMint
-    const mintPoolToken = new splToken.Token(this.connection, poolTokenMint, splToken.TOKEN_PROGRAM_ID, this.signer)
-    const base_minimumPoolTokenAmount = 10 ** (await mintPoolToken.getMintInfo()).decimals * minimumPoolTokenAmount
+    const mintPoolToken = new SplToken.Token(this.connection, poolTokenMint, SplToken.TOKEN_PROGRAM_ID, this.signer)
+    const baseMinimumPoolTokenAmount = (10 ** (await mintPoolToken.getMintInfo()).decimals) * minimumPoolTokenAmount
     const poolTokenAccount = new PublicKey(await tokenInstance.initializeTokenAccount(poolTokenMint, this.signer.publicKey))
     const saberProgramId = saber.SWAP_PROGRAM_ID
 
@@ -218,7 +214,7 @@ export class Saber {
       authority: swapAuthority,
       tokenProgramID: stableSwapConfig.tokenProgramID,
     }
-    const tx_depositInstruction = saber.depositInstruction(
+    const txDepositInstruction = saber.depositInstruction(
       {
         config,
         userAuthority: this.signer.publicKey,
@@ -228,18 +224,15 @@ export class Saber {
         tokenAccountB,
         poolTokenMint,
         poolTokenAccount,
-        // @ts-ignore
-        tokenAmountA: new splToken.u64(base_tokenAmountA),
-        // @ts-ignore
-        tokenAmountB: new splToken.u64(base_tokenAmountB),
-        // @ts-ignore
-        minimumPoolTokenAmount: new splToken.u64(base_minimumPoolTokenAmount),
+        tokenAmountA: new U64(baseTokenAmountA),
+        tokenAmountB: new U64(baseTokenAmountB),
+        minimumPoolTokenAmount: new U64(baseMinimumPoolTokenAmount),
       },
     )
 
     console.info(`tokens: ${sourceA.toString()}, ${sourceB.toString()}, ${poolTokenAccount.toString()}`)
 
-    const transaction = new Transaction().add(tx_depositInstruction)
+    const transaction = new Transaction().add(txDepositInstruction)
     const tx = await sendAndConfirmTransaction(this.connection, transaction, [this.signer])
     console.info(`(saber pool deposit) tx created: ${tx}`)
     return tx

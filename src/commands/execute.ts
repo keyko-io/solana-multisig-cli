@@ -1,5 +1,5 @@
-import {MultisigInstance} from '../multisigInstance'
-import {BaseCommand} from '../common/baseCommand'
+import {MultisigInstance} from '../multisig-instance'
+import {BaseCommand} from '../common/base-command'
 
 export default class Execute extends BaseCommand {
   static description = 'Execute an existing transaction that is already signed by the minimum number of owners.'

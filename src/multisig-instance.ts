@@ -2,9 +2,8 @@ import {
   AccountMeta,
   SYSVAR_RENT_PUBKEY,
   Signer,
-  PublicKey, Keypair
-} from '@solana/web3.js'
-// @ts-ignore
+  PublicKey,
+  Keypair} from '@solana/web3.js'
 import {Program} from '@project-serum/anchor'
 // @ts-ignore
 import {BN} from 'bn.js'
@@ -96,7 +95,7 @@ export class MultisigInstance {
     /// mind later.
     const fudge = 64
     // Can only grow the participant set by 2x the initialized value.
-    const ownerSize = maxParticipantLength * 32 + 8
+    const ownerSize = (maxParticipantLength * 32) + 8
     const multisigSize = baseSize + ownerSize + fudge
     const [, nonce] = await PublicKey.findProgramAddress(
       [multisig.publicKey.toBuffer()],
@@ -116,7 +115,6 @@ export class MultisigInstance {
         instructions: [
           await this.multisigClient.account.multisig.createInstruction(
             multisig,
-            // @ts-ignore
             multisigSize,
           ),
         ],
@@ -181,12 +179,11 @@ export class MultisigInstance {
         }
 
         return t
-      })
-      .concat({
+      }) + [{
         pubkey: transactionAccount.programId,
         isWritable: false,
         isSigner: false,
-      }),
+      }],
     })
 
     return tx

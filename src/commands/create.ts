@@ -1,7 +1,7 @@
 import {flags} from '@oclif/command'
-import {MultisigInstance} from '../multisigInstance'
+import {MultisigInstance} from '../multisig-instance'
 import {getNetwork} from '../common/util'
-import {BaseCommand} from '../common/baseCommand'
+import {BaseCommand} from '../common/base-command'
 
 export default class Create extends BaseCommand {
   static description = 'Create a new multisig account.'

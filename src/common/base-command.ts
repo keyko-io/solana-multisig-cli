@@ -1,6 +1,6 @@
 import {Command, flags} from '@oclif/command'
 import {PublicKey} from '@solana/web3.js'
-import {MultisigInstance} from '../multisigInstance'
+import {MultisigInstance} from '../multisig-instance'
 import {getNetwork} from './util'
 import * as Parser from '@oclif/parser'
 

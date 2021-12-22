@@ -1,8 +1,8 @@
 import {PublicKey} from '@solana/web3.js'
-import {MultisigInstance} from '../multisigInstance'
+import {MultisigInstance} from '../multisig-instance'
 import {getConnection} from '../common/util'
 import {Saber} from '../instructions/saber'
-import {BaseCommand} from '../common/baseCommand'
+import {BaseCommand} from '../common/base-command'
 
 export default class SaberDeposit extends BaseCommand {
   static description = 'Deposit tokens into a Saber pool.'

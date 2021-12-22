@@ -49,9 +49,9 @@ export const networks: Networks = {
 }
 
 export const saberSwapIds = {
-  program_id: 'SSwpkEEcbUqx4vtoEByFjSkhKdCT862DNVb52nZg1UZ',
-  admin_account: 'GSmjrpT8zNtp6Ke8y2xS5P1kREEjqZCjwxF8VbxDJAV8',
-  upgrade_authority: 'GSmjrpT8zNtp6Ke8y2xS5P1kREEjqZCjwxF8VbxDJAV8',
+  programId: 'SSwpkEEcbUqx4vtoEByFjSkhKdCT862DNVb52nZg1UZ',
+  adminAccount: 'GSmjrpT8zNtp6Ke8y2xS5P1kREEjqZCjwxF8VbxDJAV8',
+  upgradeAuthority: 'GSmjrpT8zNtp6Ke8y2xS5P1kREEjqZCjwxF8VbxDJAV8',
   mints: {
     usdc: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
     usdt: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
@@ -79,7 +79,7 @@ export const stableSwapConfig: saber.StableSwapConfig = {
 }
 
 export const poolTokens = {
-  usdc_usdt: {
+  UsdcUsdt: {
     swapAccount: 'VeNkoB1HvSP6bSeGybQDnx9wTWFsQb2NBCemeCDSuKL',
     authority: '72E8LfHqoxQCxnxmBbDG6WSHnDx1rWPUHNKwYvoL5qDm',
     poolToken: 'YakofBo4X3zMxa823THQJwZ8QeoU8pxPdFdxJs7JW57',

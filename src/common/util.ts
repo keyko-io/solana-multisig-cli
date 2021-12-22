@@ -7,16 +7,18 @@ import {
 import {Program, Provider} from '@project-serum/anchor'
 import MultisigIdl from '../idl'
 import {initialState, networks} from './types'
-import {NodeWallet} from './NodeWallet'
-const path = require('path')
-// @ts-ignore
+import {NodeWallet} from './nodewallet'
+import * as path from 'path'
 import * as bs58 from 'bs58'
-// @ts-ignore
 import * as bip39 from 'bip39'
 import {derivePath} from 'ed25519-hd-key'
 
 export function resolveHome(filepath: string) : string {
-  return (filepath[0] === '~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath
+  if (process.env.HOME) {
+    return (filepath[0] === '~') ? path.join(process.env.HOME, filepath.slice(1)) : filepath
+  }
+
+  return filepath
 }
 
 export function getNetwork(): any {

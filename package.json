@@ -4,7 +4,7 @@
     "name": "keyko"
   },
   "description": "CLI to manage Solana transactions using multisig.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "lib/index.js",
   "bin": {
     "sol-multisig": "./bin/run"
@@ -13,12 +13,14 @@
   "dependencies": {
     "@oclif/command": "^1",
     "@oclif/config": "^1",
+    "@oclif/parser": "",
     "@oclif/plugin-help": "^3",
     "@project-serum/anchor": "^0.14.0",
     "@project-serum/borsh": "^0.1.1",
     "@project-serum/common": "^0.0.1-beta.3",
     "@project-serum/sol-wallet-adapter": "^0.2.6",
     "@saberhq/stableswap-sdk": "^1.10.5",
+    "@solana/spl-token": "^0.1.8",
     "@solana/spl-token-registry": "0.2.819",
     "@solana/web3.js": "^1.31.0",
     "@types/big.js": "^6.1.2",

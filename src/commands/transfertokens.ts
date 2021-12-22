@@ -1,9 +1,9 @@
 import {flags} from '@oclif/command'
 import {PublicKey} from '@solana/web3.js'
-import {MultisigInstance} from '../multisigInstance'
+import {MultisigInstance} from '../multisig-instance'
 import {getConnection} from '../common/util'
 import {Token} from '../instructions/token'
-import {BaseCommand} from '../common/baseCommand'
+import {BaseCommand} from '../common/base-command'
 
 export default class TransferTokens extends BaseCommand {
   static description = 'Submit a transaction to transfer tokens via the multisig wallet.'

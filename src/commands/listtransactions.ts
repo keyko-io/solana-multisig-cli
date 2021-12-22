@@ -1,8 +1,7 @@
-import {MultisigInstance} from '../multisigInstance'
-// @ts-ignore
+import {MultisigInstance} from '../multisig-instance'
 import * as BufferLayout from 'buffer-layout'
 import * as splToken from '@solana/spl-token'
-import {BaseCommand} from '../common/baseCommand'
+import {BaseCommand} from '../common/base-command'
 
 const uint64 = (property = 'uint64') => {
   return BufferLayout.blob(8, property)
@@ -22,6 +21,10 @@ export default class ListTx extends BaseCommand {
 
   static args = []
 
+  static getTransferTxData = (tx: any, data: any) => {
+    return {instruction: data.instruction, amount: splToken.u64.fromBuffer(data.amount)}
+  }
+
   async run() {
     const {args, flags} = this.parse(ListTx)
 
@@ -34,19 +37,15 @@ export default class ListTx extends BaseCommand {
       uint64('amount'),
     ])
 
-    const getTransferTxData = (tx: any, data: any) => {
-      return {instruction: data.instruction, amount: splToken.u64.fromBuffer(data.amount)}
-    }
-
     const _txs = txs.map((tx: any, i: number) => {
       const _data = dataLayout.decode(tx.account.data)
       const {instruction, amount} = (_data.instruction && _data.instruction === 3) ?
-        getTransferTxData(tx, _data) : {instruction: null, amount: null}
-      const acc_info = ''.concat(...tx.account.accounts.map((acc: any) => {
+        ListTx.getTransferTxData(tx, _data) : {instruction: null, amount: null}
+      const accInfo = ''.concat(...tx.account.accounts.map((acc: any) => {
         return `(pubkey=${acc.pubkey.toString()}, isSigner=${acc.isSigner}) `
       }))
       const info = `programId=${tx.account.programId.toString()}, instruction=${instruction}, \
-        data=${amount}, accounts=${acc_info}, didExecute=${tx.account.didExecute}, \
+        data=${amount}, accounts=${accInfo}, didExecute=${tx.account.didExecute}, \
         didSign=${tx.account.signers}`
       return `${i + 1} -- ${tx.publicKey.toString()} : ${info}\n`
     })
