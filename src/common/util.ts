@@ -1,16 +1,9 @@
 import * as fs from 'fs';
 import {
-  Account,
   Connection,
   Keypair,
-  Signer,
-  PublicKey,
-  Transaction,
-  TransactionSignature,
   ConfirmOptions,
-  RpcResponseAndContext,
-  SimulatedTransactionResponse,
-  sendAndConfirmTransaction } from "@solana/web3.js";
+} from "@solana/web3.js";
 import { Program, Provider } from "@project-serum/anchor";
 import MultisigIdl from "../idl";
 import {initialState, networks} from "./types";

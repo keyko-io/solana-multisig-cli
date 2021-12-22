@@ -3,7 +3,7 @@ import {PublicKey, Keypair} from "@solana/web3.js";
 import * as splToken from "@solana/spl-token";
 import {MultisigInstance} from "../multisigInstance";
 import {Token} from "../instructions/token";
-import {getConnection, getWalletFromPhantomKey, getWalletFromPhantomSeedWords} from "../common/util";
+import {getConnection} from "../common/util";
 import {BaseCommand} from "../common/baseCommand";
 
 export default class ListSigners extends BaseCommand {
