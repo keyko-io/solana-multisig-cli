@@ -1,8 +1,8 @@
-import {PublicKey} from "@solana/web3.js";
-import {MultisigInstance} from "../multisigInstance";
-import {getConnection} from "../common/util";
-import {Saber} from "../instructions/saber";
-import {BaseCommand} from "../common/baseCommand";
+import {PublicKey} from '@solana/web3.js'
+import {MultisigInstance} from '../multisigInstance'
+import {getConnection} from '../common/util'
+import {Saber} from '../instructions/saber'
+import {BaseCommand} from '../common/baseCommand'
 
 export default class SaberDeposit extends BaseCommand {
   static description = 'Deposit tokens into a Saber pool.'
@@ -13,7 +13,7 @@ export default class SaberDeposit extends BaseCommand {
   ]
 
   static flags = {
-    ...BaseCommand.allFlags
+    ...BaseCommand.allFlags,
   }
 
   static args = [{name: 'swapAccount'}, {name: 'amountA'}, {name: 'amountB'}, {name: 'minPoolAmount'}]
@@ -24,28 +24,32 @@ export default class SaberDeposit extends BaseCommand {
       this.error('`swapAccount` arg is missing.')
       this.exit(1)
     }
+
     if (!args.amountA) {
       this.error('amountA is missing.')
       this.exit(1)
     }
+
     if (!args.amountB) {
       this.error('amountB is missing.')
       this.exit(1)
     }
+
     if (!args.minPoolAmount) {
       this.error('minPoolAmount is missing.')
       this.exit(1)
     }
-    const amountA = parseFloat(args.amountA)
-    const amountB = parseFloat(args.amountB)
-    const amountPoolMin = parseFloat(args.minPoolAmount)
+
+    const amountA = Number.parseFloat(args.amountA)
+    const amountB = Number.parseFloat(args.amountB)
+    const amountPoolMin = Number.parseFloat(args.minPoolAmount)
     const multisigInst: MultisigInstance = await this.getMultisigInstance(flags, args)
     const saberInst = new Saber(multisigInst, multisigInst.signer(), getConnection())
     saberInst.depositTokens(
       new PublicKey(args.swapAccount),
       amountA,
       amountB,
-      amountPoolMin
+      amountPoolMin,
     )
   }
 }

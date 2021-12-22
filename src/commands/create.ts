@@ -1,8 +1,7 @@
 import {flags} from '@oclif/command'
-import {PublicKey} from "@solana/web3.js";
-import {MultisigInstance} from "../multisigInstance";
-import {getNetwork} from "../common/util";
-import {BaseCommand} from "../common/baseCommand";
+import {MultisigInstance} from '../multisigInstance'
+import {getNetwork} from '../common/util'
+import {BaseCommand} from '../common/baseCommand'
 
 export default class Create extends BaseCommand {
   static description = 'Create a new multisig account.'
@@ -22,7 +21,7 @@ export default class Create extends BaseCommand {
     maxNumSigners: flags.integer({
       char: 'x',
       default: 10,
-      description: 'max number of signers in the multisig (DEFAULT=10).'})
+      description: 'max number of signers in the multisig (DEFAULT=10).'}),
   }
 
   static args = [{name: 'participants'}]
@@ -35,6 +34,7 @@ export default class Create extends BaseCommand {
       this.log('"participants" must be provided as an argument or in the -p (--participants) flag.')
       this.exit(1)
     }
+
     const participants = args.participants.split(',')
     this.log(`got participants: ${participants.length}, ${participants}`)
     const maxSigners = flags.maxNumSigners >= 5 ? flags.maxNumSigners : 5
@@ -43,14 +43,17 @@ export default class Create extends BaseCommand {
       this.error('maxNumSigners cannot exceed 20.')
       this.exit(1)
     }
+
     if (participants.length < 2) {
       this.error('must provide at least 2 participants.')
       this.exit(1)
     }
+
     if (participants.length > maxSigners) {
       this.error('number of participants exceeds maxNumSigners.')
       this.exit(1)
     }
+
     if (threshold > participants.length) {
       this.error('invalid threshold, cannot exceed number of participants.')
       this.exit(1)

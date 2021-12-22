@@ -1,22 +1,17 @@
 import {
-  Connection,
   Keypair,
   Signer,
   PublicKey,
-  Transaction,
-  TransactionSignature,
-  ConfirmOptions,
-  RpcResponseAndContext,
-  SimulatedTransactionResponse } from "@solana/web3.js";
-import {DEFAULT_PUB_KEY} from "./types";
+  Transaction} from '@solana/web3.js'
+import {DEFAULT_PUB_KEY} from './types'
 
 export class NodeWallet {
   private _keypair: Keypair = Keypair.generate();
   publicKey: PublicKey = DEFAULT_PUB_KEY;
 
   constructor(keypair: Keypair) {
-    this._keypair = keypair;
-    this.publicKey =   keypair.publicKey;
+    this._keypair = keypair
+    this.publicKey =   keypair.publicKey
   }
 
   signer() : Signer {
@@ -24,19 +19,19 @@ export class NodeWallet {
   }
 
   async signTransaction(transaction: Transaction): Promise<Transaction> {
-    const signer: Signer = {publicKey: this.publicKey, secretKey: this._keypair.secretKey};
-    transaction.sign(signer);
-    return transaction;
+    const signer: Signer = {publicKey: this.publicKey, secretKey: this._keypair.secretKey}
+    transaction.sign(signer)
+    return transaction
   }
 
   async signAllTransactions(
     transactions: Transaction[],
   ): Promise<Transaction[]> {
-    const signer: Signer = {publicKey: this.publicKey, secretKey: this._keypair.secretKey};
+    const signer: Signer = {publicKey: this.publicKey, secretKey: this._keypair.secretKey}
     transactions = transactions.map((tx, idx) => {
-      tx.sign(signer);
-      return tx;
-    });
-    return transactions;
+      tx.sign(signer)
+      return tx
+    })
+    return transactions
   }
 }

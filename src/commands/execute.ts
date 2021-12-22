@@ -1,6 +1,5 @@
-import {PublicKey} from "@solana/web3.js";
-import {MultisigInstance} from "../multisigInstance";
-import {BaseCommand} from "../common/baseCommand";
+import {MultisigInstance} from '../multisigInstance'
+import {BaseCommand} from '../common/baseCommand'
 
 export default class Execute extends BaseCommand {
   static description = 'Execute an existing transaction that is already signed by the minimum number of owners.'
@@ -11,7 +10,7 @@ export default class Execute extends BaseCommand {
   ]
 
   static flags = {
-    ...BaseCommand.allFlags
+    ...BaseCommand.allFlags,
   }
 
   static args = [{name: 'transaction'}]

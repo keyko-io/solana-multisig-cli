@@ -1,6 +1,5 @@
-import {PublicKey} from "@solana/web3.js";
-import {MultisigInstance} from "../multisigInstance";
-import {BaseCommand} from "../common/baseCommand";
+import {MultisigInstance} from '../multisigInstance'
+import {BaseCommand} from '../common/baseCommand'
 
 export default class Approve extends BaseCommand {
   static description = 'Approve (sign) an existing transaction.'
@@ -11,7 +10,7 @@ export default class Approve extends BaseCommand {
   ]
 
   static flags = {
-    ...BaseCommand.allFlags
+    ...BaseCommand.allFlags,
   }
 
   static args = [{name: 'transaction', description: 'the transaction`s publickey'}]

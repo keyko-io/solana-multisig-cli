@@ -1,13 +1,12 @@
-import {PublicKey} from "@solana/web3.js";
-import {MultisigInstance} from "../multisigInstance";
+import {MultisigInstance} from '../multisigInstance'
 // @ts-ignore
-import * as BufferLayout from "buffer-layout";
-import * as splToken from "@solana/spl-token";
-import {BaseCommand} from "../common/baseCommand";
+import * as BufferLayout from 'buffer-layout'
+import * as splToken from '@solana/spl-token'
+import {BaseCommand} from '../common/baseCommand'
 
 const uint64 = (property = 'uint64') => {
-  return BufferLayout.blob(8, property);
-};
+  return BufferLayout.blob(8, property)
+}
 
 export default class ListTx extends BaseCommand {
   static description = 'List all transactions for the given multisig account.'
@@ -18,7 +17,7 @@ export default class ListTx extends BaseCommand {
   ]
 
   static flags = {
-    ...BaseCommand.allFlags
+    ...BaseCommand.allFlags,
   }
 
   static args = []
@@ -33,22 +32,23 @@ export default class ListTx extends BaseCommand {
     const dataLayout = BufferLayout.struct([
       BufferLayout.u8('instruction'),
       uint64('amount'),
-    ]);
+    ])
 
     const getTransferTxData = (tx: any, data: any) => {
       return {instruction: data.instruction, amount: splToken.u64.fromBuffer(data.amount)}
     }
+
     const _txs = txs.map((tx: any, i: number) => {
       const _data = dataLayout.decode(tx.account.data)
-      const { instruction, amount } = (_data.instruction && _data.instruction === 3)
-        ? getTransferTxData(tx, _data) : {instruction:null, amount:null}
-      const acc_info =''.concat(...tx.account.accounts.map((acc: any) => {
+      const {instruction, amount} = (_data.instruction && _data.instruction === 3) ?
+        getTransferTxData(tx, _data) : {instruction: null, amount: null}
+      const acc_info = ''.concat(...tx.account.accounts.map((acc: any) => {
         return `(pubkey=${acc.pubkey.toString()}, isSigner=${acc.isSigner}) `
       }))
       const info = `programId=${tx.account.programId.toString()}, instruction=${instruction}, \
         data=${amount}, accounts=${acc_info}, didExecute=${tx.account.didExecute}, \
         didSign=${tx.account.signers}`
-      return `${i+1} -- ${tx.publicKey.toString()} : ${info}\n`
+      return `${i + 1} -- ${tx.publicKey.toString()} : ${info}\n`
     })
     const txsStr = '\n######## ' + _txs.join('\n######## ')
     this.log(`got the following txs (total of ${txs.length}): `)
